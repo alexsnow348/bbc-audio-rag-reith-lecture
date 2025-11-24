@@ -341,11 +341,6 @@ def clear_chat():
 
 with gr.Blocks(
     title="BBC Audio Scraper & Chat", 
-    theme=gr.themes.Soft(primary_hue="blue").set(
-        body_background_fill="*neutral_950",
-        body_background_fill_dark="*neutral_950",
-    ),
-    js="() => { document.querySelector('gradio-app').style.colorScheme = 'dark'; }"
 ) as app:
     gr.Markdown("""
     # 🎙️ BBC Audio Scraper, Transcription & Chat System
