@@ -339,7 +339,14 @@ def clear_chat():
 # GRADIO INTERFACE
 # ============================================================================
 
-with gr.Blocks(title="BBC Audio Scraper & Chat", theme=gr.themes.Soft()) as app:
+with gr.Blocks(
+    title="BBC Audio Scraper & Chat", 
+    theme=gr.themes.Soft(primary_hue="blue").set(
+        body_background_fill="*neutral_950",
+        body_background_fill_dark="*neutral_950",
+    ),
+    js="() => { document.querySelector('gradio-app').style.colorScheme = 'dark'; }"
+) as app:
     gr.Markdown("""
     # 🎙️ BBC Audio Scraper, Transcription & Chat System
     
@@ -409,7 +416,11 @@ with gr.Blocks(title="BBC Audio Scraper & Chat", theme=gr.themes.Soft()) as app:
                         value="base",
                         info="Larger = more accurate but slower"
                     )
-                    language = gr.Textbox(label="Language Code", value="en")
+                    language = gr.Textbox(
+                        label="Language Code", 
+                        value="english",
+                        info="Use 'english', 'spanish', 'french', etc."
+                    )
                     
                     transcribe_btn = gr.Button("Transcribe Selected File", variant="primary")
                     transcribe_all_btn = gr.Button("Transcribe All Files")
@@ -501,21 +512,23 @@ with gr.Blocks(title="BBC Audio Scraper & Chat", theme=gr.themes.Soft()) as app:
             
             gr.Markdown("---")
             
-            with gr.Row():
-                with gr.Column(scale=1):
-                    gr.Markdown("#### 🎧 Audio Player")
-                    audio_player = gr.Audio(
-                        label="Audio",
-                        type="filepath",
-                        interactive=False
-                    )
-                
-                with gr.Column(scale=1):
-                    gr.Markdown("#### 📄 PDF Viewer")
-                    pdf_viewer = gr.HTML(
-                        label="PDF Transcript",
-                        value="<p style='text-align: center; padding: 50px; color: #666;'>Select content and click 'Load Content' to view PDF</p>"
-                    )
+            # Audio player at the top - compact
+            gr.Markdown("#### 🎧 Audio Player")
+            audio_player = gr.Audio(
+                label="",
+                type="filepath",
+                interactive=False,
+                show_label=False
+            )
+            
+            gr.Markdown("---")
+            
+            # PDF viewer takes full width for optimal reading
+            gr.Markdown("#### 📄 PDF Transcript")
+            pdf_viewer = gr.HTML(
+                label="PDF Transcript",
+                value="<p style='text-align: center; padding: 50px; color: #666;'>Select content and click 'Load Content' to view PDF</p>"
+            )
             
             # Event handlers for PDF Reader
             refresh_content_btn.click(
