@@ -75,7 +75,30 @@ A complete end-to-end system for downloading, transcribing, and intelligently qu
 - Google AI API key (free tier available)
 - Optional: get_iplayer for BBC iPlayer downloads
 
-## 🚀 Installation
+## ⚡ Quick Start
+
+```bash
+# 1. Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Clone the repository
+git clone <your-repo-url>
+cd bbc-audio-rag
+
+# 3. Install dependencies
+uv sync
+
+# 4. Set up your Google AI API key
+cp .env.example .env
+# Edit .env and add your GOOGLE_AI_API_KEY
+
+# 5. Run the app
+uv run python app.py
+```
+
+Then open your browser to `http://localhost:7860` and start downloading, transcribing, and chatting! 🎉
+
+## 🚀 Detailed Installation
 
 ### 1. Install uv (if not already installed)
 
