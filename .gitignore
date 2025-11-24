@@ -1,0 +1,45 @@
+.venv/
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+
+# Downloaded audio files
+downloads/*.mp3
+downloads/*.m4a
+downloads/*.wav
+
+# Transcripts
+transcripts/*.txt
+transcripts/*.json
+
+# Vector database
+data/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gradio cache
+gradio_cached_examples/
+flagged/
+
+# UV
+uv.lock

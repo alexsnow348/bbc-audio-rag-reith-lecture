@@ -1,0 +1,15 @@
+gradio>=4.0.0
+openai-whisper
+google-generativeai
+beautifulsoup4
+requests
+feedparser
+chromadb
+langchain
+langchain-google-genai
+langchain-community
+pydub
+numpy
+pandas
+python-dotenv
+tqdm
