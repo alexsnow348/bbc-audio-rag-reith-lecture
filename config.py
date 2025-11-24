@@ -18,6 +18,7 @@ class Config:
     DOWNLOADS_DIR = BASE_DIR / os.getenv('DOWNLOADS_DIR', 'downloads')
     TRANSCRIPTS_DIR = BASE_DIR / os.getenv('TRANSCRIPTS_DIR', 'transcripts')
     VECTOR_DB_DIR = BASE_DIR / os.getenv('VECTOR_DB_DIR', 'data/chroma_db')
+    PDF_DIR = BASE_DIR / os.getenv('PDF_DIR', 'pdfs')
     
     # API Keys
     GOOGLE_AI_API_KEY = os.getenv('GOOGLE_AI_API_KEY', '')
@@ -44,6 +45,7 @@ class Config:
         cls.DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
         cls.TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
         cls.VECTOR_DB_DIR.mkdir(parents=True, exist_ok=True)
+        cls.PDF_DIR.mkdir(parents=True, exist_ok=True)
     
     @classmethod
     def validate(cls):

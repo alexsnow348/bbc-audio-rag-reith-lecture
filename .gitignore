@@ -21,6 +21,9 @@ downloads/*.wav
 transcripts/*.txt
 transcripts/*.json
 
+# Generated PDFs
+pdfs/*.pdf
+
 # Vector database
 data/
 

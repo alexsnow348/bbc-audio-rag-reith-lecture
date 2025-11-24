@@ -4,6 +4,7 @@ Provides web interface for downloading, transcribing, and chatting with BBC audi
 """
 
 import gradio as gr
+import base64
 from pathlib import Path
 from config import Config
 from src.scraper.rss_scraper import RSScraper
@@ -13,6 +14,7 @@ from src.transcription.audio_processor import AudioProcessor
 from src.chat.vector_store import VectorStore
 from src.chat.chat_engine import ChatEngine
 from src.utils.file_manager import FileManager
+from src.utils.pdf_generator import PDFGenerator
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -25,6 +27,7 @@ audio_processor = AudioProcessor()
 vector_store = VectorStore()
 chat_engine = ChatEngine(vector_store)
 file_manager = FileManager()
+pdf_generator = PDFGenerator()
 
 # ============================================================================
 # TAB 1: DOWNLOAD AUDIO
@@ -156,9 +159,149 @@ def load_transcript(transcript_name: str):
     except Exception as e:
         return f"Error: {str(e)}"
 
+def export_transcript_to_pdf(transcript_name: str):
+    """Export a single transcript to PDF"""
+    try:
+        if not transcript_name:
+            return "❌ Please select a transcript", None
+        
+        transcript_path = Config.TRANSCRIPTS_DIR / transcript_name
+        if not transcript_path.exists():
+            return "❌ Transcript not found", None
+        
+        # Generate PDF
+        pdf_path = pdf_generator.generate_pdf(transcript_path)
+        
+        return f"✅ PDF generated successfully!\nSaved to: {pdf_path.name}", str(pdf_path)
+    except Exception as e:
+        return f"❌ Error: {str(e)}", None
+
+def export_all_transcripts_to_pdf():
+    """Export all transcripts to PDF"""
+    try:
+        transcripts = file_manager.list_transcripts()
+        if not transcripts:
+            return "❌ No transcripts found to export"
+        
+        pdf_paths = pdf_generator.batch_generate_pdfs()
+        
+        if pdf_paths:
+            return f"✅ Generated {len(pdf_paths)} PDF(s) successfully!\n\nPDFs saved in: pdfs/"
+        else:
+            return "❌ No PDFs were generated"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+
 # ============================================================================
-# TAB 3: CHAT
+# TAB 3: PDF READER
 # ============================================================================
+
+def get_available_content():
+    """Get list of available audio files and their corresponding PDFs/transcripts"""
+    audio_files = file_manager.list_audio_files()
+    content_list = []
+    
+    for audio_file in audio_files:
+        # Get base name without extension
+        base_name = audio_file.stem
+        
+        # Check for corresponding transcript and PDF
+        transcript_path = Config.TRANSCRIPTS_DIR / f"{base_name}_transcript.txt"
+        pdf_path = Config.PDF_DIR / f"{base_name}_transcript.pdf"
+        
+        if transcript_path.exists():
+            content_list.append({
+                'name': base_name,
+                'audio': str(audio_file),
+                'transcript': str(transcript_path) if transcript_path.exists() else None,
+                'pdf': str(pdf_path) if pdf_path.exists() else None
+            })
+    
+    return content_list
+
+def load_content_for_reading(content_name: str):
+    """Load audio and PDF for a selected content"""
+    try:
+        if not content_name:
+            return None, "<p style='text-align: center; padding: 50px; color: #666;'>❌ Please select content to view</p>", "❌ Please select content to view"
+        
+        content_list = get_available_content()
+        selected = next((c for c in content_list if c['name'] == content_name), None)
+        
+        if not selected:
+            return None, "<p style='text-align: center; padding: 50px; color: #666;'>❌ Content not found</p>", "❌ Content not found"
+        
+        # Check if PDF exists, if not offer to generate it
+        pdf_html = ""
+        pdf_status = ""
+        
+        if selected['pdf'] and Path(selected['pdf']).exists():
+            # Read PDF and convert to base64
+            with open(selected['pdf'], 'rb') as f:
+                pdf_data = base64.b64encode(f.read()).decode('utf-8')
+            
+            # Create HTML with embedded PDF viewer using base64 data URI
+            pdf_html = f"""
+            <iframe src="data:application/pdf;base64,{pdf_data}" 
+                    width="100%" 
+                    height="800px" 
+                    style="border: 1px solid #ddd; border-radius: 4px;">
+                <p>Your browser does not support PDFs. 
+                   <a href="data:application/pdf;base64,{pdf_data}" download="{content_name}.pdf">Download the PDF</a>
+                </p>
+            </iframe>
+            """
+            pdf_status = f"✅ Ready to read: {content_name}"
+        else:
+            pdf_html = "<p style='text-align: center; padding: 50px; color: #ff9800;'>⚠️ PDF not found. Click 'Generate PDF' to create it.</p>"
+            pdf_status = f"⚠️ PDF not found. Click 'Generate PDF' to create it."
+        
+        return selected['audio'], pdf_html, pdf_status
+        
+    except Exception as e:
+        return None, f"<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
+
+def generate_pdf_for_reader(content_name: str):
+    """Generate PDF for the selected content if it doesn't exist"""
+    try:
+        if not content_name:
+            return "<p style='text-align: center; padding: 50px; color: #666;'>❌ Please select content first</p>", "❌ Please select content first"
+        
+        transcript_path = Config.TRANSCRIPTS_DIR / f"{content_name}_transcript.txt"
+        
+        if not transcript_path.exists():
+            return "<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Transcript not found</p>", "❌ Transcript not found"
+        
+        # Generate PDF
+        pdf_path = pdf_generator.generate_pdf(transcript_path)
+        
+        # Read PDF and convert to base64
+        with open(pdf_path, 'rb') as f:
+            pdf_data = base64.b64encode(f.read()).decode('utf-8')
+        
+        # Create HTML with embedded PDF viewer using base64 data URI
+        pdf_html = f"""
+        <iframe src="data:application/pdf;base64,{pdf_data}" 
+                width="100%" 
+                height="800px" 
+                style="border: 1px solid #ddd; border-radius: 4px;">
+            <p>Your browser does not support PDFs. 
+               <a href="data:application/pdf;base64,{pdf_data}" download="{content_name}.pdf">Download the PDF</a>
+            </p>
+        </iframe>
+        """
+        
+        return pdf_html, f"✅ PDF generated successfully!"
+        
+    except Exception as e:
+        return f"<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
+
+
+# ============================================================================
+# TAB 4: CHAT
+# ============================================================================
+
 
 def load_transcripts_to_vector_store():
     """Load all transcripts into vector store"""
@@ -296,9 +439,105 @@ with gr.Blocks(title="BBC Audio Scraper & Chat", theme=gr.themes.Soft()) as app:
                 transcribe_output
             )
             refresh_transcripts_btn.click(list_transcripts, None, transcripts_list)
+            
+            gr.Markdown("---")
+            gr.Markdown("#### 📄 Export to PDF")
+            gr.Markdown("Generate formatted PDF documents from your transcripts for offline reading")
+            
+            with gr.Row():
+                with gr.Column():
+                    transcript_selector = gr.Dropdown(
+                        label="Select Transcript to Export",
+                        choices=[t.name for t in file_manager.list_transcripts()],
+                        interactive=True
+                    )
+                    refresh_pdf_list_btn = gr.Button("Refresh Transcript List")
+                    
+                    with gr.Row():
+                        export_single_btn = gr.Button("📄 Export Selected to PDF", variant="primary")
+                        export_all_btn = gr.Button("📚 Export All to PDF")
+                
+                with gr.Column():
+                    pdf_output = gr.Textbox(label="Export Status", lines=3)
+                    pdf_file = gr.File(label="Download PDF", visible=True)
+            
+            # PDF Export Event handlers
+            refresh_pdf_list_btn.click(
+                lambda: gr.Dropdown(choices=[t.name for t in file_manager.list_transcripts()]),
+                None,
+                transcript_selector
+            )
+            export_single_btn.click(
+                export_transcript_to_pdf,
+                transcript_selector,
+                [pdf_output, pdf_file]
+            )
+            export_all_btn.click(
+                export_all_transcripts_to_pdf,
+                None,
+                pdf_output
+            )
+
         
         # ====================================================================
-        # TAB 3: CHAT
+        # TAB 3: PDF READER
+        # ====================================================================
+        with gr.Tab("📖 Read & Listen"):
+            gr.Markdown("### Read Transcripts While Listening to Audio")
+            gr.Markdown("Select content to view the PDF transcript alongside the audio player")
+            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    content_selector = gr.Dropdown(
+                        label="Select Content",
+                        choices=[c['name'] for c in get_available_content()],
+                        interactive=True
+                    )
+                    refresh_content_btn = gr.Button("🔄 Refresh Content List")
+                    load_content_btn = gr.Button("📖 Load Content", variant="primary")
+                    generate_pdf_btn = gr.Button("📄 Generate PDF (if missing)")
+                    
+                    reader_status = gr.Textbox(label="Status", lines=2)
+            
+            gr.Markdown("---")
+            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("#### 🎧 Audio Player")
+                    audio_player = gr.Audio(
+                        label="Audio",
+                        type="filepath",
+                        interactive=False
+                    )
+                
+                with gr.Column(scale=1):
+                    gr.Markdown("#### 📄 PDF Viewer")
+                    pdf_viewer = gr.HTML(
+                        label="PDF Transcript",
+                        value="<p style='text-align: center; padding: 50px; color: #666;'>Select content and click 'Load Content' to view PDF</p>"
+                    )
+            
+            # Event handlers for PDF Reader
+            refresh_content_btn.click(
+                lambda: gr.Dropdown(choices=[c['name'] for c in get_available_content()]),
+                None,
+                content_selector
+            )
+            
+            load_content_btn.click(
+                load_content_for_reading,
+                content_selector,
+                [audio_player, pdf_viewer, reader_status]
+            )
+            
+            generate_pdf_btn.click(
+                generate_pdf_for_reader,
+                content_selector,
+                [pdf_viewer, reader_status]
+            )
+        
+        # ====================================================================
+        # TAB 4: CHAT
         # ====================================================================
         with gr.Tab("💬 Chat with Transcripts"):
             gr.Markdown("### AI-Powered Chat with Your Transcripts")
