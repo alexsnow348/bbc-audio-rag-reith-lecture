@@ -45,6 +45,10 @@ class FileManager:
         # Get filename without extension
         name = filepath.stem
         
+        # Remove '_transcript' suffix if present
+        if name.endswith('_transcript'):
+            name = name[:-11]  # len('_transcript') = 11
+        
         # Replace hyphens and underscores with spaces
         name = name.replace('-', ' ').replace('_', ' ')
         

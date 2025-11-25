@@ -198,10 +198,14 @@ class VectorStore:
         # Build where clause for filtering
         where_clause = None
         if source_files:
-            # Filter by source files
-            where_clause = {
-                "$or": [{"source": {"$eq": str(source)}} for source in source_files]
-            }
+            if len(source_files) == 1:
+                # Single file - direct equality check
+                where_clause = {"source": {"$eq": str(source_files[0])}}
+            else:
+                # Multiple files - use $or
+                where_clause = {
+                    "$or": [{"source": {"$eq": str(source)}} for source in source_files]
+                }
         
         results = self.collection.query(
             query_texts=[query],

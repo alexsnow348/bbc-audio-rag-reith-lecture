@@ -592,18 +592,20 @@ with gr.Blocks(
                         info="Choose to chat with all transcripts or specific ones"
                     )
                     
-                    transcript_selector = gr.CheckboxGroup(
+                    transcript_selector = gr.Dropdown(
                         label="Select Transcripts (for Selected mode)",
                         choices=[file_manager.format_display_name(t) for t in file_manager.list_transcripts()],
                         visible=False,
-                        interactive=True
+                        interactive=True,
+                        multiselect=True,
+                        info="Select one or more transcripts to chat with"
                     )
                     
                     refresh_transcript_selector_btn = gr.Button("🔄 Refresh Transcript List", size="sm")
             
             # Show/hide transcript selector based on mode
             def update_selector_visibility(mode):
-                return gr.CheckboxGroup(visible=(mode == "Selected Transcripts Only"))
+                return gr.Dropdown(visible=(mode == "Selected Transcripts Only"))
             
             chat_mode.change(
                 update_selector_visibility,
@@ -612,7 +614,7 @@ with gr.Blocks(
             )
             
             refresh_transcript_selector_btn.click(
-                lambda: gr.CheckboxGroup(choices=[file_manager.format_display_name(t) for t in file_manager.list_transcripts()]),
+                lambda: gr.Dropdown(choices=[file_manager.format_display_name(t) for t in file_manager.list_transcripts()]),
                 None,
                 transcript_selector
             )
