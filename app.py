@@ -345,7 +345,7 @@ with gr.Blocks(
     gr.Markdown("""
     # 🎙️ BBC Audio Scraper, Transcription & Chat System
     
-    Download BBC audio programmes, transcribe them using **free local AI** (Whisper), and chat with the transcripts using Google AI.
+    Download BBC audio programmes, transcribe them using **local AI** (Whisper), and chat with the transcripts using Google AI.
     """)
     
     with gr.Tabs():
@@ -394,13 +394,21 @@ with gr.Blocks(
         # TAB 2: TRANSCRIBE
         # ====================================================================
         with gr.Tab("📝 Transcribe"):
-            gr.Markdown("### Transcribe Audio to Text (FREE - uses Whisper locally)")
+            gr.Markdown("### Transcribe Audio to Text")
             
             with gr.Row():
                 with gr.Column():
+                    # Sort method selector
+                    sort_method = gr.Radio(
+                        label="Sort Files By",
+                        choices=["By Date (Newest First)", "By Similar Topics (AI)"],
+                        value="By Date (Newest First)",
+                        info="AI sorting groups similar topics together using Gemini"
+                    )
+                    
                     audio_file = gr.Dropdown(
                         label="Select Audio File",
-                        choices=[str(f) for f in file_manager.list_audio_files()],
+                        choices=[(file_manager.format_display_name(f), str(f)) for f in file_manager.list_audio_files_sorted_by_date()],
                         interactive=True
                     )
                     refresh_audio_btn = gr.Button("Refresh Audio List")
@@ -428,10 +436,24 @@ with gr.Blocks(
             refresh_transcripts_btn = gr.Button("Refresh List")
             transcripts_list = gr.Textbox(label="Transcript Files", lines=5)
             
+            # Helper function to get sorted files based on method
+            def get_sorted_audio_files(sort_method_value):
+                if sort_method_value == "By Similar Topics (AI)":
+                    files = file_manager.list_audio_files_sorted_by_topic()
+                else:
+                    files = file_manager.list_audio_files_sorted_by_date()
+                return gr.Dropdown(choices=[(file_manager.format_display_name(f), str(f)) for f in files])
+            
             # Event handlers
+            sort_method.change(
+                get_sorted_audio_files,
+                sort_method,
+                audio_file
+            )
+            
             refresh_audio_btn.click(
-                lambda: gr.Dropdown(choices=[str(f) for f in file_manager.list_audio_files()]),
-                None,
+                get_sorted_audio_files,
+                sort_method,
                 audio_file
             )
             transcribe_btn.click(

@@ -15,7 +15,7 @@ logger = setup_logger(__name__)
 
 class WhisperTranscriber:
     """
-    Free local audio transcription using OpenAI Whisper.
+    Local audio transcription using OpenAI Whisper.
     
     Model sizes (speed vs accuracy trade-off):
     - tiny: Fastest, least accurate (~1GB RAM)

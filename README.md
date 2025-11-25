@@ -25,7 +25,7 @@ A complete end-to-end system for downloading, transcribing, and intelligently qu
 - Batch download multiple episodes
 - Popular BBC podcast feeds included
 
-### 🎯 Free Local Transcription
+### 🎯 Local Transcription
 - Powered by OpenAI Whisper (runs on your machine)
 - Multiple model sizes: `tiny`, `base`, `small`, `medium`, `large`
 - No API costs or usage limits

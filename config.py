@@ -23,7 +23,7 @@ class Config:
     # API Keys
     GOOGLE_AI_API_KEY = os.getenv('GOOGLE_AI_API_KEY', '')
     
-    # Whisper Settings (FREE local transcription)
+    # Whisper Settings (local transcription)
     WHISPER_MODEL_SIZE = os.getenv('WHISPER_MODEL_SIZE', 'base')  # tiny, base, small, medium, large
     
     # Logging
