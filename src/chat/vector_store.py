@@ -181,18 +181,60 @@ class VectorStore:
         logger.info(f"Found {len(formatted_results)} results for query: {query[:50]}...")
         return formatted_results
     
-    def get_context(self, query: str, n_results: int = None) -> str:
+    def search_filtered(self, query: str, source_files: List[str] = None, n_results: int = None) -> List[Dict]:
+        """
+        Search for relevant transcript chunks, optionally filtered by source files.
+        
+        Args:
+            query: Search query
+            source_files: Optional list of source file paths to filter by
+            n_results: Number of results to return
+        
+        Returns:
+            List of result dictionaries with text and metadata
+        """
+        n_results = n_results or Config.TOP_K_RESULTS
+        
+        # Build where clause for filtering
+        where_clause = None
+        if source_files:
+            # Filter by source files
+            where_clause = {
+                "$or": [{"source": {"$eq": str(source)}} for source in source_files]
+            }
+        
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=n_results,
+            where=where_clause if where_clause else None
+        )
+        
+        # Format results
+        formatted_results = []
+        if results['documents'] and results['documents'][0]:
+            for i, doc in enumerate(results['documents'][0]):
+                formatted_results.append({
+                    'text': doc,
+                    'metadata': results['metadatas'][0][i] if results['metadatas'] else {},
+                    'distance': results['distances'][0][i] if results.get('distances') else None,
+                })
+        
+        logger.info(f"Found {len(formatted_results)} filtered results for query: {query[:50]}...")
+        return formatted_results
+    
+    def get_context(self, query: str, n_results: int = None, source_files: List[str] = None) -> str:
         """
         Get context string for LLM from search results.
         
         Args:
             query: Search query
             n_results: Number of results to include
+            source_files: Optional list of source files to filter by
         
         Returns:
             Formatted context string
         """
-        results = self.search(query, n_results)
+        results = self.search_filtered(query, source_files, n_results)
         
         if not results:
             return "No relevant information found in the transcripts."

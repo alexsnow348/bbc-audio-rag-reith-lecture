@@ -573,10 +573,49 @@ with gr.Blocks(
             gr.Markdown("### AI-Powered Chat with Your Transcripts")
             
             with gr.Row():
-                load_btn = gr.Button("📚 Load Transcripts to Vector Store", variant="primary")
-                load_output = gr.Textbox(label="Status", lines=3)
+                with gr.Column(scale=2):
+                    load_btn = gr.Button("📚 Load Transcripts to Vector Store", variant="primary")
+                with gr.Column(scale=3):
+                    load_output = gr.Textbox(label="Status", lines=3)
             
             load_btn.click(load_transcripts_to_vector_store, None, load_output)
+            
+            gr.Markdown("---")
+            
+            # Chat mode and transcript selection
+            with gr.Row():
+                with gr.Column():
+                    chat_mode = gr.Radio(
+                        label="Chat Mode",
+                        choices=["All Transcripts", "Selected Transcripts Only"],
+                        value="All Transcripts",
+                        info="Choose to chat with all transcripts or specific ones"
+                    )
+                    
+                    transcript_selector = gr.CheckboxGroup(
+                        label="Select Transcripts (for Selected mode)",
+                        choices=[file_manager.format_display_name(t) for t in file_manager.list_transcripts()],
+                        visible=False,
+                        interactive=True
+                    )
+                    
+                    refresh_transcript_selector_btn = gr.Button("🔄 Refresh Transcript List", size="sm")
+            
+            # Show/hide transcript selector based on mode
+            def update_selector_visibility(mode):
+                return gr.CheckboxGroup(visible=(mode == "Selected Transcripts Only"))
+            
+            chat_mode.change(
+                update_selector_visibility,
+                chat_mode,
+                transcript_selector
+            )
+            
+            refresh_transcript_selector_btn.click(
+                lambda: gr.CheckboxGroup(choices=[file_manager.format_display_name(t) for t in file_manager.list_transcripts()]),
+                None,
+                transcript_selector
+            )
             
             gr.Markdown("---")
             
@@ -591,9 +630,49 @@ with gr.Blocks(
                 submit_btn = gr.Button("Send", variant="primary")
                 clear_btn = gr.Button("Clear Chat")
             
+            # Updated chat function with transcript filtering
+            def chat_with_transcripts_filtered(message: str, history, mode: str, selected_transcripts: list):
+                if not chat_engine.is_ready():
+                    return history + [[message, "❌ Google AI API key not configured. Please set GOOGLE_AI_API_KEY in .env file."]]
+                
+                try:
+                    # Determine source files based on mode
+                    source_files = None
+                    if mode == "Selected Transcripts Only" and selected_transcripts:
+                        # Map display names back to file paths
+                        all_transcripts = file_manager.list_transcripts()
+                        source_files = []
+                        for transcript in all_transcripts:
+                            if file_manager.format_display_name(transcript) in selected_transcripts:
+                                source_files.append(str(transcript))
+                    
+                    result = chat_engine.ask(message, use_rag=True, source_files=source_files)
+                    response = result['response']
+                    
+                    # Add source citations if available
+                    if result['sources']:
+                        sources_text = chat_engine.format_sources(result['sources'])
+                        response += f"\n\n**Sources:**\n{sources_text}"
+                    
+                    # Add mode indicator
+                    if mode == "Selected Transcripts Only" and selected_transcripts:
+                        response += f"\n\n_💡 Searched in: {len(selected_transcripts)} selected transcript(s)_"
+                    
+                    return history + [[message, response]]
+                except Exception as e:
+                    return history + [[message, f"❌ Error: {str(e)}"]]
+            
             # Event handlers
-            submit_btn.click(chat_with_transcripts, [msg, chatbot], chatbot)
-            msg.submit(chat_with_transcripts, [msg, chatbot], chatbot)
+            submit_btn.click(
+                chat_with_transcripts_filtered,
+                [msg, chatbot, chat_mode, transcript_selector],
+                chatbot
+            )
+            msg.submit(
+                chat_with_transcripts_filtered,
+                [msg, chatbot, chat_mode, transcript_selector],
+                chatbot
+            )
             clear_btn.click(clear_chat, None, chatbot)
             submit_btn.click(lambda: "", None, msg)  # Clear input after send
     

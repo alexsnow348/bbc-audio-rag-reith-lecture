@@ -40,7 +40,7 @@ class ChatEngine:
         """Check if chat engine is ready to use"""
         return self.model is not None
     
-    def ask(self, question: str, use_rag: bool = True, n_context: int = None) -> Dict:
+    def ask(self, question: str, use_rag: bool = True, n_context: int = None, source_files: List[str] = None) -> Dict:
         """
         Ask a question and get an AI response.
         
@@ -48,6 +48,7 @@ class ChatEngine:
             question: User question
             use_rag: Whether to use RAG (retrieve context from transcripts)
             n_context: Number of context chunks to retrieve
+            source_files: Optional list of source files to filter context by
         
         Returns:
             Dictionary with response and metadata
@@ -66,10 +67,10 @@ class ChatEngine:
             
             if use_rag:
                 n_context = n_context or Config.TOP_K_RESULTS
-                search_results = self.vector_store.search(question, n_context)
+                search_results = self.vector_store.search_filtered(question, source_files, n_context)
                 
                 if search_results:
-                    context = self.vector_store.get_context(question, n_context)
+                    context = self.vector_store.get_context(question, n_context, source_files)
                     sources = [
                         {
                             'source': result['metadata'].get('source', 'Unknown'),
@@ -81,6 +82,12 @@ class ChatEngine:
             
             # Build prompt
             if context:
+                scope_info = ""
+                if source_files:
+                    from pathlib import Path
+                    file_names = [Path(f).stem for f in source_files]
+                    scope_info = f"\n\nNote: This answer is based only on the following selected transcripts: {', '.join(file_names)}"
+                
                 prompt = f"""You are a helpful assistant that answers questions based on BBC audio programme transcripts.
 
 Context from transcripts:
@@ -88,7 +95,7 @@ Context from transcripts:
 
 User question: {question}
 
-Please provide a comprehensive answer based on the context above. If the context doesn't contain relevant information, say so. Always cite which source(s) you're referencing."""
+Please provide a comprehensive answer based on the context above. If the context doesn't contain relevant information, say so. Always cite which source(s) you're referencing.{scope_info}"""
             else:
                 prompt = f"""You are a helpful assistant for BBC audio programme transcripts.
 
