@@ -39,13 +39,13 @@ A complete end-to-end system for downloading, transcribing, and intelligently qu
 - Source citations for transparency
 - Conversation history tracking
 
-### 🌐 Web Interface
+### Web Interface
 - Clean, intuitive Gradio interface
 - Three main tabs: Download, Transcribe, Chat
 - Real-time progress updates
 - File management built-in
 
-## �️ Tech Stack
+## Tech Stack
 
 ### Core Technologies
 - **[Python 3.9+](https://www.python.org/)** - Programming language
@@ -67,7 +67,7 @@ A complete end-to-end system for downloading, transcribing, and intelligently qu
 - **[requests](https://requests.readthedocs.io/)** - HTTP library
 - **[python-dotenv](https://github.com/theskumar/python-dotenv)** - Environment variable management
 
-## �📋 Requirements
+## 📋 Requirements
 
 - Python 3.9+
 - [uv](https://docs.astral.sh/uv/) (modern Python package manager)
