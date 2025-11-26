@@ -1,0 +1,12 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+pydantic==2.10.3
+python-dotenv==1.0.1
+
+# Reuse existing dependencies from parent project
+# These will be imported from the parent directory
+# - openai-whisper
+# - google-generativeai
+# - chromadb
+# - feedparser

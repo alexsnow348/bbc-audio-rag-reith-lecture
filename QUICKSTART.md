@@ -72,7 +72,4 @@ sudo apt install ffmpeg
 brew install ffmpeg
 ```
 
-**Verify installation:**
-```bash
-uv run python test_installation.py
-```
+

@@ -16,6 +16,7 @@ from src.chat.chat_engine import ChatEngine
 from src.utils.file_manager import FileManager
 from src.utils.pdf_generator import PDFGenerator
 from src.utils.logger import setup_logger
+from src.utils.history_manager import HistoryManager
 
 logger = setup_logger(__name__)
 
@@ -28,6 +29,7 @@ vector_store = VectorStore()
 chat_engine = ChatEngine(vector_store)
 file_manager = FileManager()
 pdf_generator = PDFGenerator()
+history_manager = HistoryManager()
 
 # ============================================================================
 # TAB 1: DOWNLOAD AUDIO
@@ -232,6 +234,9 @@ def load_content_for_reading(content_name: str):
         if not selected:
             return None, "<p style='text-align: center; padding: 50px; color: #666;'>❌ Content not found</p>", "❌ Content not found"
         
+        # Track that this content was accessed
+        history_manager.mark_as_accessed(content_name)
+        
         # Check if PDF exists, if not offer to generate it
         pdf_html = ""
         pdf_status = ""
@@ -297,6 +302,17 @@ def generate_pdf_for_reader(content_name: str):
     except Exception as e:
         return f"<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
 
+def mark_content_as_completed(content_name: str):
+    """Mark content as completed"""
+    try:
+        if not content_name:
+            return "❌ Please select content first"
+        
+        history_manager.mark_as_completed(content_name)
+        return f"✅ Marked '{content_name}' as completed!"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 
 # ============================================================================
 # TAB 4: CHAT
@@ -336,16 +352,353 @@ def clear_chat():
     return []
 
 # ============================================================================
+# TAB 5: HISTORY
+# ============================================================================
+
+def get_listening_history_display(status_filter: str = "All"):
+    """Get listening history formatted for display"""
+    try:
+        filter_map = {
+            "All": None,
+            "In Progress": "in_progress",
+            "Completed": "completed"
+        }
+        
+        records = history_manager.get_history(filter_map.get(status_filter))
+        
+        if not records:
+            return "No history found"
+        
+        output = []
+        for record in records:
+            status_emoji = "✅" if record['status'] == 'completed' else "📖"
+            output.append(f"{status_emoji} **{record['content_name']}**")
+            output.append(f"   Status: {record['status'].replace('_', ' ').title()}")
+            output.append(f"   Last accessed: {record.get('last_accessed', 'N/A')}")
+            if record.get('completed_at'):
+                output.append(f"   Completed: {record['completed_at']}")
+            output.append("")
+        
+        return "\n".join(output)
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+def get_history_statistics():
+    """Get history statistics"""
+    try:
+        stats = history_manager.get_statistics()
+        return f"""📊 **Listening Statistics**
+
+✅ Completed: {stats['completed']}
+📖 In Progress: {stats['in_progress']}
+📚 Total Content: {stats['total_content']}
+📈 Completion Rate: {stats['completion_rate']}%
+"""
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+def get_chat_sessions_display():
+    """Get chat sessions formatted for display"""
+    try:
+        sessions = chat_engine.list_sessions()
+        
+        if not sessions:
+            return "No chat sessions found"
+        
+        output = []
+        for session in sessions:
+            from datetime import datetime
+            start_time = datetime.fromisoformat(session['start_time']).strftime('%Y-%m-%d %H:%M')
+            output.append(f"💬 **{session['session_name']}**")
+            output.append(f"   Date: {start_time}")
+            output.append(f"   Messages: {session['message_count']}")
+            output.append(f"   Preview: {session['preview']}")
+            output.append(f"   ID: `{session['session_id']}`")
+            output.append("")
+        
+        return "\n".join(output)
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+def export_chat_session(session_id: str, export_format: str):
+    """Export a chat session"""
+    try:
+        if not session_id:
+            return "❌ Please enter a session ID", None
+        
+        format_map = {
+            "Text (.txt)": "txt",
+            "Markdown (.md)": "md",
+            "JSON (.json)": "json"
+        }
+        
+        export_path = chat_engine.export_session(session_id, format_map.get(export_format, "txt"))
+        
+        if export_path:
+            return f"✅ Exported to: {export_path.name}", str(export_path)
+        else:
+            return "❌ Export failed", None
+    except Exception as e:
+        return f"❌ Error: {str(e)}", None
+
+def delete_chat_session(session_id: str):
+    """Delete a chat session"""
+    try:
+        if not session_id:
+            return "❌ Please enter a session ID"
+        
+        if chat_engine.delete_session(session_id):
+            return f"✅ Deleted session: {session_id}"
+        else:
+            return "❌ Session not found"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+def start_new_chat_session():
+    """Start a new chat session"""
+    session_id = chat_engine.start_new_session()
+    return f"✅ Started new session: {session_id}", []
+
+# ============================================================================
 # GRADIO INTERFACE
 # ============================================================================
 
+# Custom CSS for modern design
+custom_css = """
+/* Modern color palette and design system */
+:root {
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+    --success-500: #10b981;
+    --warning-500: #f59e0b;
+    --error-500: #ef4444;
+}
+
+/* Global improvements */
+.gradio-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+}
+
+/* Header styling */
+.gradio-container h1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+    font-size: 2.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Tab styling */
+.tab-nav button {
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 0.5rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.tab-nav button[aria-selected="true"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.tab-nav button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Button improvements */
+.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4) !important;
+}
+
+.secondary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    border-radius: 0.5rem !important;
+}
+
+/* Card-like containers */
+.gr-box {
+    border-radius: 1rem !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+.gr-box:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Input fields */
+input, textarea, select {
+    border-radius: 0.5rem !important;
+    border: 2px solid #e5e7eb !important;
+    transition: all 0.2s ease !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Dropdown styling */
+.gr-dropdown {
+    border-radius: 0.5rem !important;
+}
+
+/* Status messages */
+.gr-textbox:has(> label:contains("Status")) {
+    font-weight: 500;
+}
+
+/* Chat interface */
+.message-wrap {
+    border-radius: 1rem !important;
+    padding: 1rem !important;
+    margin: 0.5rem 0 !important;
+}
+
+.message.user {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+.message.bot {
+    background: #f3f4f6 !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+/* Audio player */
+audio {
+    border-radius: 0.75rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* File upload area */
+.upload-container {
+    border: 2px dashed #d1d5db !important;
+    border-radius: 1rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.upload-container:hover {
+    border-color: #667eea !important;
+    background: #eff6ff !important;
+}
+
+/* Markdown content */
+.prose {
+    line-height: 1.7 !important;
+}
+
+.prose h2 {
+    color: #1f2937 !important;
+    font-weight: 700 !important;
+    margin-top: 1.5rem !important;
+}
+
+.prose h3 {
+    color: #374151 !important;
+    font-weight: 600 !important;
+}
+
+/* Loading states */
+.loading {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6941a5 100%);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .gradio-container h1 {
+        font-size: 1.75rem !important;
+    }
+    
+    .tab-nav button {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+}
+"""
+
+# Custom theme
+custom_theme = gr.themes.Soft(
+    primary_hue="blue",
+    secondary_hue="purple",
+    neutral_hue="slate",
+).set(
+    body_background_fill="linear-gradient(to bottom right, #f8fafc, #f1f5f9)",
+    button_primary_background_fill="linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    button_primary_background_fill_hover="linear-gradient(135deg, #5568d3 0%, #6941a5 100%)",
+    button_primary_text_color="white",
+    button_secondary_background_fill="linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    button_secondary_text_color="white",
+    input_border_color="#e5e7eb",
+    input_border_width="2px",
+    block_border_width="1px",
+    block_shadow="0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+)
+
 with gr.Blocks(
-    title="BBC Audio Scraper & Chat", 
+    title="BBC Audio Scraper & Chat",
+    theme=custom_theme,
+    css=custom_css,
 ) as app:
     gr.Markdown("""
     # 🎙️ BBC Audio Scraper, Transcription & Chat System
     
     Download BBC audio programmes, transcribe them using **local AI** (Whisper), and chat with the transcripts using Google AI.
+    
+    ---
     """)
     
     with gr.Tabs():
@@ -524,6 +877,7 @@ with gr.Blocks(
                     refresh_content_btn = gr.Button("🔄 Refresh Content List")
                     load_content_btn = gr.Button("📖 Load Content", variant="primary")
                     generate_pdf_btn = gr.Button("📄 Generate PDF (if missing)")
+                    mark_completed_btn = gr.Button("✅ Mark as Completed", variant="secondary")
                     
                     reader_status = gr.Textbox(label="Status", lines=2)
             
@@ -564,6 +918,12 @@ with gr.Blocks(
                 generate_pdf_for_reader,
                 content_selector,
                 [pdf_viewer, reader_status]
+            )
+            
+            mark_completed_btn.click(
+                mark_content_as_completed,
+                content_selector,
+                reader_status
             )
         
         # ====================================================================
@@ -638,6 +998,10 @@ with gr.Blocks(
                     return history + [[message, "❌ Google AI API key not configured. Please set GOOGLE_AI_API_KEY in .env file."]]
                 
                 try:
+                    # Start new session if none exists
+                    if not chat_engine.current_session_id:
+                        chat_engine.start_new_session()
+                    
                     # Determine source files based on mode
                     source_files = None
                     if mode == "Selected Transcripts Only" and selected_transcripts:
@@ -660,6 +1024,9 @@ with gr.Blocks(
                     if mode == "Selected Transcripts Only" and selected_transcripts:
                         response += f"\n\n_💡 Searched in: {len(selected_transcripts)} selected transcript(s)_"
                     
+                    # Auto-save session after each message
+                    chat_engine.save_session()
+                    
                     return history + [[message, response]]
                 except Exception as e:
                     return history + [[message, f"❌ Error: {str(e)}"]]
@@ -677,6 +1044,101 @@ with gr.Blocks(
             )
             clear_btn.click(clear_chat, None, chatbot)
             submit_btn.click(lambda: "", None, msg)  # Clear input after send
+        
+        # ====================================================================
+        # TAB 5: HISTORY
+        # ====================================================================
+        with gr.Tab("📊 History"):
+            gr.Markdown("### View Your Listening and Chat History")
+            
+            with gr.Tabs():
+                # Listening History Section
+                with gr.Tab("📖 Listening History"):
+                    gr.Markdown("#### Track your progress through audio content")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            history_stats = gr.Markdown(value=get_history_statistics())
+                            refresh_stats_btn = gr.Button("🔄 Refresh Statistics")
+                        
+                        with gr.Column(scale=2):
+                            status_filter = gr.Radio(
+                                label="Filter by Status",
+                                choices=["All", "In Progress", "Completed"],
+                                value="All"
+                            )
+                            history_display = gr.Markdown(value=get_listening_history_display("All"))
+                            refresh_history_btn = gr.Button("🔄 Refresh History")
+                    
+                    # Event handlers for listening history
+                    refresh_stats_btn.click(
+                        get_history_statistics,
+                        None,
+                        history_stats
+                    )
+                    
+                    refresh_history_btn.click(
+                        get_listening_history_display,
+                        status_filter,
+                        history_display
+                    )
+                    
+                    status_filter.change(
+                        get_listening_history_display,
+                        status_filter,
+                        history_display
+                    )
+                
+                # Chat History Section
+                with gr.Tab("💬 Chat History"):
+                    gr.Markdown("#### View and manage your chat sessions")
+                    
+                    with gr.Row():
+                        with gr.Column():
+                            chat_sessions_display = gr.Markdown(value=get_chat_sessions_display())
+                            refresh_sessions_btn = gr.Button("🔄 Refresh Sessions")
+                            
+                            gr.Markdown("---")
+                            gr.Markdown("#### Session Management")
+                            
+                            session_id_input = gr.Textbox(
+                                label="Session ID",
+                                placeholder="Paste session ID from above",
+                                lines=1
+                            )
+                            
+                            with gr.Row():
+                                export_format = gr.Dropdown(
+                                    label="Export Format",
+                                    choices=["Text (.txt)", "Markdown (.md)", "JSON (.json)"],
+                                    value="Markdown (.md)"
+                                )
+                            
+                            with gr.Row():
+                                export_session_btn = gr.Button("📥 Export Session", variant="primary")
+                                delete_session_btn = gr.Button("🗑️ Delete Session", variant="stop")
+                            
+                            session_action_output = gr.Textbox(label="Status", lines=2)
+                            exported_file = gr.File(label="Downloaded File", visible=True)
+                    
+                    # Event handlers for chat history
+                    refresh_sessions_btn.click(
+                        get_chat_sessions_display,
+                        None,
+                        chat_sessions_display
+                    )
+                    
+                    export_session_btn.click(
+                        export_chat_session,
+                        [session_id_input, export_format],
+                        [session_action_output, exported_file]
+                    )
+                    
+                    delete_session_btn.click(
+                        delete_chat_session,
+                        session_id_input,
+                        session_action_output
+                    )
     
     gr.Markdown("""
     ---
