@@ -157,6 +157,19 @@ class HistoryManager:
             'completion_rate': round(completion_rate, 1)
         }
     
+    def get_completed_content_names(self) -> set:
+        """
+        Get set of all completed content names.
+        
+        Returns:
+            Set of content names that have been marked as completed
+        """
+        return {
+            content_name 
+            for content_name, data in self.history.items() 
+            if data.get('status') == 'completed'
+        }
+    
     def clear_history(self):
         """Clear all history"""
         self.history = {}

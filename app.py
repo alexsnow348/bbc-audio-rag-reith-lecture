@@ -202,11 +202,17 @@ def export_all_transcripts_to_pdf():
 def get_available_content():
     """Get list of available audio files and their corresponding PDFs/transcripts"""
     audio_files = file_manager.list_audio_files()
+    completed_names = history_manager.get_completed_content_names()
     content_list = []
     
     for audio_file in audio_files:
         # Get base name without extension
         base_name = audio_file.stem
+        
+        # Skip if this content is completed
+        display_name = file_manager.format_display_name(audio_file)
+        if display_name in completed_names:
+            continue
         
         # Check for corresponding transcript and PDF
         transcript_path = Config.TRANSCRIPTS_DIR / f"{base_name}_transcript.txt"
@@ -390,7 +396,6 @@ def get_history_statistics():
         return f"""📊 **Listening Statistics**
 
 ✅ Completed: {stats['completed']}
-📖 In Progress: {stats['in_progress']}
 📚 Total Content: {stats['total_content']}
 📈 Completion Rate: {stats['completion_rate']}%
 """
@@ -480,7 +485,7 @@ custom_css = """
 /* Global improvements */
 .gradio-container {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-    max-width: 1400px !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
 }
 
@@ -658,7 +663,7 @@ audio {
 }
 
 /* Responsive improvements */
-@media (max-width: 768px) {
+@media (max-width: 100%) {
     .gradio-container h1 {
         font-size: 1.75rem !important;
     }
@@ -742,6 +747,17 @@ with gr.Blocks(
             iplayer_btn.click(download_with_iplayer, iplayer_query, download_output)
             feeds_btn.click(get_popular_feeds, None, download_output)
             refresh_downloads_btn.click(list_downloads, None, downloads_list)
+                
+            gr.Markdown("""
+            ---
+            ### 💡 Quick Start Guide
+            
+            1. **Download**: Use the RSS feed URL for Reith Lectures: `https://podcasts.files.bbci.co.uk/p02p8xh7.rss`
+            2. **Transcribe**: Select downloaded audio and click "Transcribe" (uses free Whisper AI)
+            3. **Chat**: Load transcripts to vector store, then ask questions about the content!
+            
+            **Note**: Make sure to set your `GOOGLE_AI_API_KEY` in the `.env` file for chat functionality.
+            """)
         
         # ====================================================================
         # TAB 2: TRANSCRIBE
@@ -761,7 +777,11 @@ with gr.Blocks(
                     
                     audio_file = gr.Dropdown(
                         label="Select Audio File",
-                        choices=[(file_manager.format_display_name(f), str(f)) for f in file_manager.list_audio_files_sorted_by_date()],
+                        choices=[
+                            (file_manager.format_display_name(f), str(f)) 
+                            for f in file_manager.list_audio_files_sorted_by_date()
+                            if file_manager.format_display_name(f) not in history_manager.get_completed_content_names()
+                        ],
                         interactive=True
                     )
                     refresh_audio_btn = gr.Button("Refresh Audio List")
@@ -791,11 +811,22 @@ with gr.Blocks(
             
             # Helper function to get sorted files based on method
             def get_sorted_audio_files(sort_method_value):
+                # Get completed content names from history
+                completed_names = history_manager.get_completed_content_names()
+                
+                # Get sorted files
                 if sort_method_value == "By Similar Topics (AI)":
                     files = file_manager.list_audio_files_sorted_by_topic()
                 else:
                     files = file_manager.list_audio_files_sorted_by_date()
-                return gr.Dropdown(choices=[(file_manager.format_display_name(f), str(f)) for f in files])
+                
+                # Filter out completed files
+                filtered_files = [
+                    f for f in files 
+                    if file_manager.format_display_name(f) not in completed_names
+                ]
+                
+                return gr.Dropdown(choices=[(file_manager.format_display_name(f), str(f)) for f in filtered_files])
             
             # Event handlers
             sort_method.change(
@@ -1056,36 +1087,11 @@ with gr.Blocks(
                 with gr.Tab("📖 Listening History"):
                     gr.Markdown("#### Track your progress through audio content")
                     
-                    with gr.Row():
-                        with gr.Column(scale=1):
-                            history_stats = gr.Markdown(value=get_history_statistics())
-                            refresh_stats_btn = gr.Button("🔄 Refresh Statistics")
-                        
-                        with gr.Column(scale=2):
-                            status_filter = gr.Radio(
-                                label="Filter by Status",
-                                choices=["All", "In Progress", "Completed"],
-                                value="All"
-                            )
-                            history_display = gr.Markdown(value=get_listening_history_display("All"))
-                            refresh_history_btn = gr.Button("🔄 Refresh History")
-                    
-                    # Event handlers for listening history
-                    refresh_stats_btn.click(
-                        get_history_statistics,
-                        None,
-                        history_stats
-                    )
+                    history_display = gr.Markdown(value=get_listening_history_display("All"))
+                    refresh_history_btn = gr.Button("🔄 Refresh History")
                     
                     refresh_history_btn.click(
                         get_listening_history_display,
-                        status_filter,
-                        history_display
-                    )
-                    
-                    status_filter.change(
-                        get_listening_history_display,
-                        status_filter,
                         history_display
                     )
                 
@@ -1139,17 +1145,7 @@ with gr.Blocks(
                         session_id_input,
                         session_action_output
                     )
-    
-    gr.Markdown("""
-    ---
-    ### 💡 Quick Start Guide
-    
-    1. **Download**: Use the RSS feed URL for Reith Lectures: `https://podcasts.files.bbci.co.uk/p02p8xh7.rss`
-    2. **Transcribe**: Select downloaded audio and click "Transcribe" (uses free Whisper AI)
-    3. **Chat**: Load transcripts to vector store, then ask questions about the content!
-    
-    **Note**: Make sure to set your `GOOGLE_AI_API_KEY` in the `.env` file for chat functionality.
-    """)
+
 
 if __name__ == "__main__":
     logger.info("Starting BBC Audio Scraper & Chat application")

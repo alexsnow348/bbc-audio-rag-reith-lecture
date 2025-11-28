@@ -1,4 +1,5 @@
 # Feature Ideas List
+- Only list the non-completed auto files in the read and listen page
 - Download any audio file from the web and transcribe it
 - Downlaod from YouTube playlist
 - Download from SoundCloud
