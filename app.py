@@ -482,12 +482,7 @@ custom_css = """
     --error-500: #D96B6B;
 }
 
-/* Global improvements */
-.gradio-container {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-    max-width: 100% !important;
-    margin: 0 auto !important;
-}
+
 
 /* Header styling */
 .gradio-container h1 {
@@ -699,19 +694,26 @@ with gr.Blocks(
     css=custom_css,
     
 ) as app:
-    gr.Image(
-        "./logo/banner.png",
-        show_label=False,
-        show_download_button=False,
-        container=False,
-        height="100%",   # Set desired height in pixels
-        width="100%"     # Set desired width in pixels
-    )
+  
     gr.Markdown("""
-    
-    Download BBC audio programmes, transcribe them using **local AI** (Whisper), and chat with the transcripts using Google AI.
-    
-    ---
+    <div style='text-align: center; padding: 2rem 1rem; background: linear-gradient(135deg, #2D3748 0%, #1A202C 100%); border-radius: 1rem; margin-bottom: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
+        <h1 style='color: white; font-size: 2.5rem; margin: 0; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
+            🎙️ <span style='background: linear-gradient(135deg, #D96B6B 0%, #EAC36B 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;'>BBC Audio Transcript & Chat</span>
+        </h1>
+        <p style='font-size: 1.2rem; margin: 1rem 0 0 0; font-weight: 600;'>
+            <span style='color: #97CFC6;'>📚 Download</span> 
+            <span style='color: rgba(255,255,255,0.5);'>•</span> 
+            <span style='color: #EAC36B;'>📝 Transcribe</span> 
+            <span style='color: rgba(255,255,255,0.5);'>•</span> 
+            <span style='color: #D96B6B;'>💬 Chat with AI</span>
+        </p>
+        <p style='color: rgba(255,255,255,0.7); font-size: 0.95rem; margin: 0.75rem 0 0 0;'>
+            ⚡ Powered by <span style='color: #97CFC6; font-weight: 600;'>Whisper AI</span> & <span style='color: #EAC36B; font-weight: 600;'>Google Gemini</span>
+        </p>
+        <p style='color: rgba(255,255,255,0.5); font-size: 0.85rem; margin: 0.5rem 0 0 0;'>
+            🎓 <a href='https://alexsnowschool.org/' target='_blank' style='color: #97CFC6; text-decoration: none; font-weight: 600; transition: color 0.2s;' onmouseover='this.style.color="#EAC36B"' onmouseout='this.style.color="#97CFC6"'>Alex Snow School</a>
+        </p>
+    </div>
     """)
     
     with gr.Tabs():
@@ -921,7 +923,8 @@ with gr.Blocks(
                     reader_status = gr.Textbox(label="Status", lines=2)
             
             gr.Markdown("---")
-            
+           
+            gr.Markdown("---")
             # Audio player at the top - compact
             gr.Markdown("#### 🎧 Audio Player")
             audio_player = gr.Audio(
@@ -939,7 +942,7 @@ with gr.Blocks(
                 label="PDF Transcript",
                 value="<p style='text-align: center; padding: 50px; color: #666;'>Select content and click 'Load Content' to view PDF</p>"
             )
-            
+           
             # Event handlers for PDF Reader
             refresh_content_btn.click(
                 lambda: gr.Dropdown(choices=[c['name'] for c in get_available_content()]),
