@@ -265,13 +265,13 @@ def load_content_for_reading(content_name: str):
             """
             pdf_status = f"✅ Ready to read: {content_name}"
         else:
-            pdf_html = "<p style='text-align: center; padding: 50px; color: #ff9800;'>⚠️ PDF not found. Click 'Generate PDF' to create it.</p>"
+            pdf_html = "<p style='text-align: center; padding: 50px; color: #EAC36B;'>⚠️ PDF not found. Click 'Generate PDF' to create it.</p>"
             pdf_status = f"⚠️ PDF not found. Click 'Generate PDF' to create it."
         
         return selected['audio'], pdf_html, pdf_status
         
     except Exception as e:
-        return None, f"<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
+        return None, f"<p style='text-align: center; padding: 50px; color: #D96B6B;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
 
 def generate_pdf_for_reader(content_name: str):
     """Generate PDF for the selected content if it doesn't exist"""
@@ -282,7 +282,7 @@ def generate_pdf_for_reader(content_name: str):
         transcript_path = Config.TRANSCRIPTS_DIR / f"{content_name}_transcript.txt"
         
         if not transcript_path.exists():
-            return "<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Transcript not found</p>", "❌ Transcript not found"
+            return "<p style='text-align: center; padding: 50px; color: #D96B6B;'>❌ Transcript not found</p>", "❌ Transcript not found"
         
         # Generate PDF
         pdf_path = pdf_generator.generate_pdf(transcript_path)
@@ -306,7 +306,7 @@ def generate_pdf_for_reader(content_name: str):
         return pdf_html, f"✅ PDF generated successfully!"
         
     except Exception as e:
-        return f"<p style='text-align: center; padding: 50px; color: #f44336;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
+        return f"<p style='text-align: center; padding: 50px; color: #D96B6B;'>❌ Error: {str(e)}</p>", f"❌ Error: {str(e)}"
 
 def mark_content_as_completed(content_name: str):
     """Mark content as completed"""
@@ -474,12 +474,12 @@ custom_css = """
 :root {
     --primary-50: #eff6ff;
     --primary-100: #dbeafe;
-    --primary-500: #3b82f6;
-    --primary-600: #2563eb;
-    --primary-700: #1d4ed8;
-    --success-500: #10b981;
-    --warning-500: #f59e0b;
-    --error-500: #ef4444;
+    --primary-500: #D96B6B;
+    --primary-600: #C55A5A;
+    --primary-700: #5C4A4A;
+    --success-500: #97CFC6;
+    --warning-500: #EAC36B;
+    --error-500: #D96B6B;
 }
 
 /* Global improvements */
@@ -491,7 +491,7 @@ custom_css = """
 
 /* Header styling */
 .gradio-container h1 {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #D96B6B 0%, #5C4A4A 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -510,19 +510,19 @@ custom_css = """
 }
 
 .tab-nav button[aria-selected="true"] {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #D96B6B 0%, #5C4A4A 100%) !important;
     color: white !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
 
 .tab-nav button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(217, 107, 107, 0.3) !important;
 }
 
 /* Button improvements */
 .primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #D96B6B 0%, #5C4A4A 100%) !important;
     border: none !important;
     color: white !important;
     font-weight: 600 !important;
@@ -534,11 +534,11 @@ custom_css = """
 
 .primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4) !important;
+    box-shadow: 0 10px 15px -3px rgba(217, 107, 107, 0.4) !important;
 }
 
 .secondary {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    background: linear-gradient(135deg, #97CFC6 0%, #7AB8A8 100%) !important;
     border: none !important;
     color: white !important;
     font-weight: 600 !important;
@@ -565,8 +565,8 @@ input, textarea, select {
 }
 
 input:focus, textarea:focus, select:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    border-color: #D96B6B !important;
+    box-shadow: 0 0 0 3px rgba(217, 107, 107, 0.1) !important;
 }
 
 /* Dropdown styling */
@@ -587,7 +587,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .message.user {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #D96B6B 0%, #5C4A4A 100%) !important;
     color: white !important;
 }
 
@@ -610,7 +610,7 @@ audio {
 }
 
 .upload-container:hover {
-    border-color: #667eea !important;
+    border-color: #D96B6B !important;
     background: #eff6ff !important;
 }
 
@@ -654,12 +654,12 @@ audio {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #D96B6B 0%, #5C4A4A 100%);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #5568d3 0%, #6941a5 100%);
+    background: linear-gradient(135deg, #C55A5A 0%, #4A3A3A 100%);
 }
 
 /* Responsive improvements */
@@ -694,12 +694,20 @@ custom_theme = gr.themes.Soft(
 )
 
 with gr.Blocks(
-    title="BBC Audio Scraper & Chat",
+    title="BBC Audio Transcript & Chat - Alex Snow School",
     theme=custom_theme,
     css=custom_css,
+    
 ) as app:
+    gr.Image(
+        "./logo/banner.png",
+        show_label=False,
+        show_download_button=False,
+        container=False,
+        height="100%",   # Set desired height in pixels
+        width="100%"     # Set desired width in pixels
+    )
     gr.Markdown("""
-    # 🎙️ BBC Audio Scraper, Transcription & Chat System
     
     Download BBC audio programmes, transcribe them using **local AI** (Whisper), and chat with the transcripts using Google AI.
     
@@ -1146,7 +1154,10 @@ with gr.Blocks(
                         session_action_output
                     )
 
+    gr.Markdown("---")
+    gr.Markdown("*Made with ❤️ from [Alex Snow School](https://alexsnowschool.org/)*")
+
 
 if __name__ == "__main__":
     logger.info("Starting BBC Audio Scraper & Chat application")
-    app.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    app.launch(server_name="0.0.0.0", server_port=7860, share=False, favicon_path="./logo/logo.png")
