@@ -170,6 +170,30 @@ GOOGLE_AI_API_KEY=your_api_key_here
 
 Get a free Google AI API key at: https://makersuite.google.com/app/apikey
 
+## 📦 Dependency Management
+
+This project uses `uv` for dependency management. `pyproject.toml` is the source of truth.
+
+### Syncing Dependencies
+
+To sync your environment with `pyproject.toml`:
+
+```bash
+uv sync
+```
+
+### Exporting requirements.txt
+
+If you need a `requirements.txt` file (e.g., for legacy deployments), you can export it from `uv.lock`:
+
+```bash
+# Update lock file first
+uv lock
+
+# Export to requirements.txt
+uv export --format requirements-txt --no-hashes --no-emit-project > requirements.txt
+```
+
 ## 💻 Usage
 
 ### Run the Gradio App
