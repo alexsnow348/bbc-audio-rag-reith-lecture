@@ -1102,7 +1102,8 @@ with gr.Blocks(
                     refresh_history_btn = gr.Button("🔄 Refresh History")
                     
                     refresh_history_btn.click(
-                        get_listening_history_display,
+                        lambda: get_listening_history_display("All"),
+                        [],
                         history_display
                     )
                 
