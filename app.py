@@ -891,7 +891,10 @@ with gr.Blocks(
                 with gr.Column():
                     transcript_selector = gr.Dropdown(
                         label="Select Transcript to Export",
-                        choices=[t.name for t in file_manager.list_transcripts()],
+                        choices=[
+                            t.name for t in file_manager.list_transcripts()
+                            if file_manager.format_display_name(t) not in history_manager.get_completed_content_names()
+                        ],
                         interactive=True
                     )
                     refresh_pdf_list_btn = gr.Button("Refresh Transcript List")
@@ -906,7 +909,10 @@ with gr.Blocks(
             
             # PDF Export Event handlers
             refresh_pdf_list_btn.click(
-                lambda: gr.Dropdown(choices=[t.name for t in file_manager.list_transcripts()]),
+                lambda: gr.Dropdown(choices=[
+                    t.name for t in file_manager.list_transcripts()
+                    if file_manager.format_display_name(t) not in history_manager.get_completed_content_names()
+                ]),
                 None,
                 transcript_selector
             )
