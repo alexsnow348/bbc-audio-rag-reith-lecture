@@ -1,0 +1,9 @@
+{
+  "title": "P v NP",
+  "description": "<p>Melvyn Bragg and guests discuss the problem of P versus NP, which has a bearing on online security. There is a $1,000,000 prize on offer from the Clay Mathematical Institute for the first person to come up with a complete solution. At its heart is the question \"are there problems for which the answers can be checked by computers, but not found in a reasonable time?\" If the answer to that is yes, then P does not equal NP. However, if all answers can be found easily as well as checked, if only we knew how, then P equals NP. The area has intrigued mathematicians and computer scientists since Alan Turing, in 1936, found that it's impossible to decide in general whether an algorithm will run forever on some problems. Resting on P versus NP is the security of all online transactions which are currently encrypted: if it transpires that P=NP, if answers could be found as easily as checked, computers could crack passwords in moments.</p><p>With </p><p>Colva Roney-Dougal\nReader in Pure Mathematics at the University of St Andrews</p><p>Timothy Gowers\nRoyal Society Research Professor in Mathematics at the University of Cambridge</p><p>And </p><p>Leslie Ann Goldberg\nProfessor of Computer Science and Fellow of St Edmund Hall, University of Oxford</p><p>Producer: Simon Tillotson.</p>",
+  "published": "Thu, 05 Nov 2015 11:06:00 +0000",
+  "source_url": "http://open.live.bbc.co.uk/mediaselector/6/redir/version/2.0/mediaset/audio-nondrm-download-rss/proto/http/vpid/p037611x.mp3",
+  "feed_url": "https://podcasts.files.bbci.co.uk/b006qykl.rss",
+  "file_hash": "d02fea1c17ec6491288b51f95a90821b",
+  "created_at": "2025-12-02T12:40:53.438547"
+}

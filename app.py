@@ -17,6 +17,7 @@ from src.utils.file_manager import FileManager
 from src.utils.pdf_generator import PDFGenerator
 from src.utils.logger import setup_logger
 from src.utils.history_manager import HistoryManager
+from src.utils.recommendation_engine import RecommendationEngine
 
 logger = setup_logger(__name__)
 
@@ -30,6 +31,7 @@ chat_engine = ChatEngine(vector_store)
 file_manager = FileManager()
 pdf_generator = PDFGenerator()
 history_manager = HistoryManager()
+recommendation_engine = RecommendationEngine()
 
 # ============================================================================
 # TAB 1: DOWNLOAD AUDIO
@@ -104,7 +106,7 @@ def transcribe_file(audio_file, model_size: str, language: str):
     """Transcribe a single audio file"""
     try:
         if not audio_file:
-            return "❌ Please select an audio file", ""
+            return "❌ Please select an audio file"
         
         # Update model if changed
         if model_size != transcriber.model_size:
@@ -115,15 +117,11 @@ def transcribe_file(audio_file, model_size: str, language: str):
         transcript_path = transcriber.transcribe_and_save(Path(audio_file), language)
         
         if transcript_path:
-            # Read transcript
-            with open(transcript_path, 'r', encoding='utf-8') as f:
-                transcript_text = f.read()
-            
-            return f"✅ Transcription complete!\nSaved to: {transcript_path.name}", transcript_text
+            return f"✅ Transcription complete!\nSaved to: {transcript_path.name}"
         else:
-            return "❌ Transcription failed", ""
+            return "❌ Transcription failed"
     except Exception as e:
-        return f"❌ Error: {str(e)}", ""
+        return f"❌ Error: {str(e)}"
 
 def transcribe_all(model_size: str, language: str):
     """Transcribe all audio files"""
@@ -318,6 +316,57 @@ def mark_content_as_completed(content_name: str):
         return f"✅ Marked '{content_name}' as completed!"
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
+def get_recommendations():
+    """Get personalized recommendations based on listening history"""
+    try:
+        # Get completed titles
+        completed_titles = history_manager.get_completed_titles()
+        
+        # Get full listening history with metadata
+        listening_history = history_manager.get_history(status_filter='completed')
+        
+        # Get all available audio files
+        audio_files = file_manager.list_audio_files()
+        all_titles = [file_manager.format_display_name(f) for f in audio_files]
+        
+        # Filter out completed titles from available
+        available_titles = [t for t in all_titles if t not in completed_titles]
+        
+        # Generate recommendations with history metadata
+        recommendations = recommendation_engine.generate_recommendations(
+            completed_titles=completed_titles,
+            available_titles=available_titles,
+            listening_history=listening_history,
+            top_n=5
+        )
+        
+        # Format for display
+        display_text = recommendation_engine.format_recommendations_for_display(recommendations)
+        
+        # Extract recommended titles for sorting
+        recommended_titles = [rec['title'] for rec in recommendations if rec['title'] not in ['API Not Configured', 'No History Yet', 'No Content Available', 'Error']]
+        
+        # Sort audio files: recommended first, then alphabetically
+        sorted_choices = []
+        audio_file_map = {file_manager.format_display_name(f): str(f) for f in audio_files}
+        
+        # Add recommended files first
+        for title in recommended_titles:
+            if title in audio_file_map and title not in completed_titles:
+                sorted_choices.append((title, audio_file_map[title]))
+        
+        # Add remaining files alphabetically
+        remaining_titles = sorted([t for t in available_titles if t not in recommended_titles])
+        for title in remaining_titles:
+            if title in audio_file_map:
+                sorted_choices.append((title, audio_file_map[title]))
+        
+        return display_text, gr.Dropdown(choices=sorted_choices)
+        
+    except Exception as e:
+        logger.error(f"Error getting recommendations: {e}")
+        return f"❌ Error generating recommendations: {str(e)}", gr.Dropdown()
 
 
 # ============================================================================
@@ -775,18 +824,22 @@ with gr.Blocks(
         with gr.Tab("📝 Transcribe"):
             gr.Markdown("### Transcribe Audio to Text")
             
+            # Recommendations at the top
+            gr.Markdown("### 🎯 What to Listen Next?")
+            gr.Markdown("Get AI-powered recommendations based on what you've completed")
+            
+            with gr.Row():
+                with gr.Column(scale=2):
+                    recommendations_display = gr.Markdown(value="Click 'Get Recommendations' to see personalized suggestions!")
+                with gr.Column(scale=1):
+                    get_recommendations_btn = gr.Button("✨ Get Recommendations", variant="primary", size="lg")
+            
+            gr.Markdown("---")
+            
             with gr.Row():
                 with gr.Column():
-                    # Sort method selector
-                    sort_method = gr.Radio(
-                        label="Sort Files By",
-                        choices=["By Date (Newest First)", "By Similar Topics (AI)"],
-                        value="By Date (Newest First)",
-                        info="AI sorting groups similar topics together using Gemini"
-                    )
-                    
                     audio_file = gr.Dropdown(
-                        label="Select Audio File",
+                        label="Select Audio File (Recommended first)",
                         choices=[
                             (file_manager.format_display_name(f), str(f)) 
                             for f in file_manager.list_audio_files_sorted_by_date()
@@ -809,58 +862,26 @@ with gr.Blocks(
                     )
                     
                     transcribe_btn = gr.Button("Transcribe Selected File", variant="primary")
-                    transcribe_all_btn = gr.Button("Transcribe All Files")
                 
                 with gr.Column():
-                    transcribe_output = gr.Textbox(label="Status", lines=3)
-                    transcript_display = gr.Textbox(label="Transcript", lines=15)
-            
-            gr.Markdown("#### Saved Transcripts")
-            refresh_transcripts_btn = gr.Button("Refresh List")
-            transcripts_list = gr.Textbox(label="Transcript Files", lines=5)
-            
-            # Helper function to get sorted files based on method
-            def get_sorted_audio_files(sort_method_value):
-                # Get completed content names from history
-                completed_names = history_manager.get_completed_content_names()
-                
-                # Get sorted files
-                if sort_method_value == "By Similar Topics (AI)":
-                    files = file_manager.list_audio_files_sorted_by_topic()
-                else:
-                    files = file_manager.list_audio_files_sorted_by_date()
-                
-                # Filter out completed files
-                filtered_files = [
-                    f for f in files 
-                    if file_manager.format_display_name(f) not in completed_names
-                ]
-                
-                return gr.Dropdown(choices=[(file_manager.format_display_name(f), str(f)) for f in filtered_files])
+                    transcribe_output = gr.Textbox(label="Status", lines=10)
+
             
             # Event handlers
-            sort_method.change(
-                get_sorted_audio_files,
-                sort_method,
-                audio_file
-            )
-            
             refresh_audio_btn.click(
-                get_sorted_audio_files,
-                sort_method,
+                lambda: gr.Dropdown(choices=[
+                    (file_manager.format_display_name(f), str(f)) 
+                    for f in file_manager.list_audio_files_sorted_by_date()
+                    if file_manager.format_display_name(f) not in history_manager.get_completed_content_names()
+                ]),
+                None,
                 audio_file
             )
             transcribe_btn.click(
                 transcribe_file,
                 [audio_file, model_size, language],
-                [transcribe_output, transcript_display]
-            )
-            transcribe_all_btn.click(
-                transcribe_all,
-                [model_size, language],
                 transcribe_output
             )
-            refresh_transcripts_btn.click(list_transcripts, None, transcripts_list)
             
             gr.Markdown("---")
             gr.Markdown("#### 📄 Export to PDF")
@@ -898,6 +919,13 @@ with gr.Blocks(
                 export_all_transcripts_to_pdf,
                 None,
                 pdf_output
+            )
+            
+            # Recommendation event handler - updates both display and audio dropdown
+            get_recommendations_btn.click(
+                get_recommendations,
+                None,
+                [recommendations_display, audio_file]
             )
 
         

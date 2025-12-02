@@ -170,6 +170,20 @@ class HistoryManager:
             if data.get('status') == 'completed'
         }
     
+    def get_completed_titles(self) -> List[str]:
+        """
+        Get list of all completed content titles.
+        
+        Returns:
+            List of content titles that have been marked as completed
+        """
+        return [
+            content_name 
+            for content_name, data in self.history.items() 
+            if data.get('status') == 'completed'
+        ]
+
+    
     def clear_history(self):
         """Clear all history"""
         self.history = {}
